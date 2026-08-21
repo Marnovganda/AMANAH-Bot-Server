@@ -71,9 +71,4 @@ Seluruh anggota grup dapat menggunakan perintah berikut di WhatsApp:
 * `/deadline [YYYY-MM-DD]` — Melengkapi tanggal tugas pending.
 * `/mapel [nama_mapel]` — Melengkapi mata pelajaran tugas pending.
 ---
-
-## 📝 Lisensi
-
-Proyek ini dibuat untuk kebutuhan Karya Tulis Ilmiah (KTI) dan dilisensikan di bawah [MIT License](https://www.google.com/search?q=LICENSE).
-
 ```
