@@ -42,7 +42,7 @@ Masuk ke menu **Settings -> Variables and secrets** pada Space kamu, lalu tambah
 * `GEMINI_API_KEY`: API Key utama Google Gemini.
 * `GEMINI_API_KEY_BACKUP`: API Key cadangan Gemini (opsional, untuk *fallback*).
 * `FONNTE_TOKEN`: Token API dari Fonnte.
-* `FONNTE_GROUP_ID`: ID grup WhatsApp tujuan (misal: `120363407069913309@g.us`).
+* `FONNTE_GROUP_ID`: ID grup WhatsApp tujuan.
 
 ### 3. Upload File
 Unggah seluruh berkas di repositori ini (`app.py`, `Dockerfile`, `requirements.txt`, `.gitattributes`, `README.md`) ke Space kamu. Server akan berjalan secara otomatis pada port `7860`.
