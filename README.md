@@ -1,4 +1,4 @@
-📅 AMANAH — Backend & WhatsApp Bot Server
+📅 AMANAH Backend & WhatsApp Bot Server
 
 Repositori ini berisi berkas *backend server* untuk sistem **AMANAH (Asisten Manajemen Notifikasi Tugas Harian)**. Layanan berbasis **Flask (Python)** ini bertindak sebagai pusat pemrosesan data tugas, integrasi AI Gemini, basis data Supabase, serta pengelola otomatisasi bot WhatsApp via Fonnte API[cite: 8, 10].
 Server ini dirancang untuk dapat di-deploy secara mudah di **Hugging Face Spaces** menggunakan Docker.
