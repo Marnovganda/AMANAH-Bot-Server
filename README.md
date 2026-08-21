@@ -1,12 +1,3 @@
----
-title: IoT Task Reminder System
-emoji: 📅
-colorFrom: blue
-colorTo: purple
-sdk: docker
-pinned: false
----
-
 # IoT Task Reminder System (KTI Project)
 
 Sistem Pengingat Tugas berbasis IoT menggunakan **ESP32**, **Mic INMP441**, dan **LCD ILI9341 Capacitive Touch**.
