@@ -1,6 +1,6 @@
 📅 AMANAH Backend & WhatsApp Bot Server
 
-Repositori ini berisi berkas *backend server* untuk sistem **AMANAH (Asisten Manajemen Notifikasi Tugas Harian)**. Layanan berbasis **Flask (Python)** ini bertindak sebagai pusat pemrosesan data tugas, integrasi AI Gemini, basis data Supabase, serta pengelola otomatisasi bot WhatsApp via Fonnte API[cite: 8, 10].
+Repositori ini berisi berkas *backend server* untuk sistem **AMANAH (Asisten Manajemen Notifikasi Tugas Harian)**. Layanan berbasis **Flask (Python)** ini bertindak sebagai pusat pemrosesan data tugas, integrasi AI Gemini, basis data Supabase, serta pengelola otomatisasi bot WhatsApp via Fonnte API.
 Server ini dirancang untuk dapat di-deploy secara mudah di **Hugging Face Spaces** menggunakan Docker.
 
 
@@ -10,7 +10,7 @@ Server ini dirancang untuk dapat di-deploy secara mudah di **Hugging Face Spaces
 * **Pengolahan AI Gemini**: Memproses audio maupun teks pesan untuk mengekstraksi mata pelajaran, deskripsi tugas, dan tanggal *deadline* secara otomatis.
 * **Manajemen Tugas Pending (`/confirm`)**: Menangani konfirmasi tugas dari perangkat fisik dan menanyakan informasi yang belum lengkap ke grup WhatsApp.
 * **Otomatisasi Bot WhatsApp (`/webhook`)**: Menerima pesan dari grup WhatsApp untuk mengelola tugas (perintah `/tugas`, `/add`, `/edit`, `/hapus`, dll.).
-* **Penjadwal Pengingat Harian (APScheduler)**: Mengirimkan pengingat tugas aktif setiap pukul **18:00 WIB** (waktu dapat diubah) secara otomatis[cite: 10].
+* **Penjadwal Pengingat Harian (APScheduler)**: Mengirimkan pengingat tugas aktif setiap pukul **18:00 WIB** (waktu dapat diubah) secara otomatis.
 
 ---
 
