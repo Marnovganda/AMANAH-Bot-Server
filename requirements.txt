@@ -1,0 +1,8 @@
+flask
+google-genai
+apscheduler
+requests
+pydub
+gunicorn
+supabase
+python-dotenv
