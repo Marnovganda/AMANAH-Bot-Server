@@ -12,12 +12,10 @@ from pathlib import Path
 import re
 from dotenv import load_dotenv
 
-# Load sensitive keys from .env file
 load_dotenv()
 
 app = Flask(__name__)
 
-# Supabase & Gemini Configuration (Secrets dari HF Settings -> Secrets)
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
@@ -47,8 +45,8 @@ def gemini_generate(model_name, **kwargs):
             return client_backup.models.generate_content(model=model_name, **kwargs)
         raise
 
-# Public Variables (dari HF Settings -> Variables / .env)
-FONNTE_TOKEN    = os.getenv("FONNTE_TOKEN")          # DIPERBAIKI: token Fonnte untuk kirim/terima WA
+
+FONNTE_TOKEN    = os.getenv("FONNTE_TOKEN")
 FONNTE_GROUP_ID = os.getenv("FONNTE_GROUP_ID", "120363407069913309@g.us")
 TZ = os.getenv("TZ", "Asia/Jakarta")
 
@@ -304,7 +302,7 @@ def resolve_relative_dates(text):
 
     result = text
     for pattern, date_obj in relative_map:
-        date_str = date_obj.isoformat()  # YYYY-MM-DD
+        date_str = date_obj.isoformat()
         new_result = re.sub(pattern, date_str, result, flags=re.IGNORECASE)
         if new_result != result:
             print(f"DEBUG [resolve_dates]: '{pattern}' -> '{date_str}'")
@@ -378,19 +376,12 @@ def process_text_with_gemini(text):
         print(f"DEBUG CRITICAL: Terjadi Exception: {str(e)}")
         return None
 
-
-# ============================================================
-# DIPERBAIKI: Fungsi send_wa() diambil dari app.py dir A
-# Sebelumnya fungsi ini dihapus dari file ini sehingga bot
-# tidak bisa mengirim maupun menerima balasan pesan WA.
-# ============================================================
 def send_wa(message, target=None):
     """Kirim pesan WhatsApp via Fonnte API."""
     if target is None:
         target = FONNTE_GROUP_ID
     try:
         print(f"DEBUG: Mengirim WA ke {target}...")
-        # Jika target adalah grup (mengandung '@'), gunakan countryCode '0'
         c_code = '0' if '@' in str(target) else '62'
         
         response = requests.post('https://api.fonnte.com/send', data={
@@ -444,7 +435,6 @@ def check_pending_deadlines():
             return
 
         if reminder_count >= 3:
-            # Sudah 3 kali diingatkan, hapus tugas dan beritahu via WA
             clear_pending_task()
             send_wa(
                 f"\U0001f5d1\ufe0f *TUGAS DIHAPUS OTOMATIS*\n\n"
@@ -456,7 +446,6 @@ def check_pending_deadlines():
             print(f"DEBUG [check_pending]: Pending task '{tugas}' dihapus setelah 3 hari tanpa respon.", flush=True)
             return
 
-        # Kirim pengingat via WA
         reminder_count += 1
         pending["reminder_count"] = reminder_count
         save_pending_task(pending)
@@ -488,7 +477,6 @@ def send_reminders():
         
         for task in tasks:
             if task['deadline'] >= today:
-                # DIPERBAIKI: Kirim pesan pengingat via WA (sebelumnya hanya print)
                 message = (
                     f"\U0001f514 *PENGINGAT TUGAS*\n\n"
                     f"Mapel : {task.get('mapel', '-')}\n"
@@ -506,15 +494,11 @@ def send_reminders():
 
 @app.route('/upload', methods=['POST'])
 def upload_audio():
-    # Path absolut agar folder 'uploads' di Docker terbaca dengan benar
     filepath = os.path.abspath(os.path.join(UPLOAD_FOLDER, "record.wav"))
-    
-    # Pastikan folder ada
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)
 
     try:
-        # 1. Simpan data stream dari ESP32
         with open(filepath, 'wb') as f:
             while True:
                 chunk = request.stream.read(4096)
@@ -522,25 +506,18 @@ def upload_audio():
                     break
                 f.write(chunk)
         
-        # 2. Validasi file fisik
         if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
             return jsonify({"status": "error", "message": "File kosong atau gagal simpan"}), 400
 
         print(f"DEBUG: File tersimpan di {filepath} ({os.path.getsize(filepath)} bytes)", flush=True)
-
-        # 3. Panggil Gemini
         gemini_res = process_audio_with_gemini(filepath)
         
         if gemini_res and isinstance(gemini_res, dict):
             tugas    = (gemini_res.get("tugas") or "").strip() or None
             deadline = (gemini_res.get("deadline") or "").strip() or None
             mapel    = (gemini_res.get("mapel") or "").strip() or None
-
-            # Jika tidak ada tugas -> tolak
             if not tugas:
                 return jsonify({"status": "error", "message": "AI gagal mengekstrak tugas dari audio"}), 500
-
-            # Cek field yang hilang
             missing = []
             if not deadline:
                 missing.append("deadline")
@@ -548,14 +525,12 @@ def upload_audio():
                 missing.append("mapel")
 
             if missing:
-                # Simpan pending -- WA belum dikirim, tunggu konfirmasi dari alat dulu
                 pending = {
                     "tugas": tugas,
                     "mapel": mapel or "Umum",
                     "deadline": deadline,
                     "missing": missing,
                     "source": "audio"
-                    # confirmed_at akan ditambahkan oleh /confirm setelah siswa tekan tombol di alat
                 }
                 save_pending_task(pending)
                 print(f"DEBUG /upload: Partial result -- missing {missing}, pending disimpan (WA belum dikirim).", flush=True)
@@ -569,7 +544,6 @@ def upload_audio():
                     "message": "Informasi belum lengkap. Konfirmasi di alat untuk lanjut."
                 })
 
-            # Semua field lengkap -> kembalikan normal
             return jsonify({
                 "status": "success",
                 "mapel": mapel,
@@ -596,14 +570,12 @@ def confirm_task():
         data = request.get_json(force=True, silent=True)
         if not data:
             return jsonify({"status": "error", "message": "Payload tidak valid atau bukan JSON."}), 400
-
-        # --- EKSTRAK FIELD ---
+            
         mapel    = (data.get('mapel') or '').strip()
         tugas    = (data.get('tugas') or '').strip()
         deadline = (data.get('deadline') or '').strip()
         action   = (data.get('action') or '').strip().lower()
 
-        # Bersihkan nilai sentinel dari ESP32 ("Tidak terdeteksi", dll.)
         if mapel.lower() in ('tidak terdeteksi', 'null', 'none', ''):
             mapel = ''
         if deadline.lower() in ('tidak terdeteksi', 'null', 'none', ''):
@@ -611,26 +583,21 @@ def confirm_task():
 
         print(f"DEBUG /confirm: mapel='{mapel}' tugas='{tugas}' deadline='{deadline}' action='{action}'", flush=True)
 
-        # --- VERIFIKASI 1: Tindakan Pembatalan ---
         if action in ('delete', 'cancel', 'tidak'):
             pending = get_pending_task()
             if pending and pending.get("tugas", "").strip().lower() == tugas.lower():
                 clear_pending_task()
             return jsonify({"status": "cancelled", "message": "Tugas dibatalkan oleh pengguna."})
 
-        # --- VERIFIKASI 2: Tugas wajib ada ---
         if not tugas:
             return jsonify({"status": "error", "message": "Field 'tugas' tidak boleh kosong."}), 400
 
-        # --- VERIFIKASI 3: Cek apakah ini pending task ---
         pending = get_pending_task()
         is_pending_match = pending and pending.get("tugas", "").strip().lower() == tugas.lower()
 
         if is_pending_match and pending.get("missing"):
-            # Tandai bahwa siswa sudah konfirmasi dari alat
             pending["confirmed_at"] = datetime.now().isoformat()
             pending["reminder_count"] = 0
-            # Update field jika ESP32 mengirim nilai yang valid
             if mapel and mapel != pending.get("mapel", ""):
                 pending["mapel"] = mapel
             if deadline:
@@ -638,7 +605,6 @@ def confirm_task():
                 pending["missing"] = [m for m in pending["missing"] if m != "deadline"]
             save_pending_task(pending)
 
-            # Kirim WA meminta info yang masih kurang
             missing = pending.get("missing", [])
             mapel_display    = pending.get("mapel") or "Belum disebutkan"
             deadline_display = pending.get("deadline") or "Belum disebutkan"
@@ -670,7 +636,6 @@ def confirm_task():
                     "Contoh: `/mapel Kimia`\n\n"
                     "\u23f3 Jika tidak dibalas dalam 3 hari, tugas akan dihapus otomatis."
                 )
-            # DIPERBAIKI: Kirim WA (sebelumnya baris send_wa diganti dengan variabel dummy)
             send_wa(msg, target=FONNTE_GROUP_ID)
             print(f"DEBUG /confirm: Pending task dikonfirmasi dari alat. WA terkirim, menunggu info: {missing}", flush=True)
             return jsonify({
@@ -679,11 +644,9 @@ def confirm_task():
                 "missing": missing
             })
 
-        # --- VERIFIKASI 4: Deadline wajib ada (untuk tugas lengkap) ---
         if not deadline:
             return jsonify({"status": "error", "message": "Field 'deadline' tidak boleh kosong."}), 400
 
-        # --- VERIFIKASI 5: Format Tanggal (harus YYYY-MM-DD) ---
         try:
             deadline_date = datetime.strptime(deadline, "%Y-%m-%d").date()
         except ValueError:
@@ -692,7 +655,6 @@ def confirm_task():
                 "message": f"Format deadline tidak valid: '{deadline}'. Harus YYYY-MM-DD."
             }), 400
 
-        # --- VERIFIKASI 6: Deadline tidak boleh di masa lalu ---
         today = datetime.now().date()
         if deadline_date < today:
             return jsonify({
@@ -700,12 +662,10 @@ def confirm_task():
                 "message": f"Deadline ({deadline}) sudah lewat! Hari ini: {today.isoformat()}"
             }), 400
 
-        # --- SIMPAN KE DATABASE ---
         mapel_final = mapel if mapel else "Umum"
         add_task(mapel_final, tugas, deadline)
         print(f"DEBUG /confirm: Tugas berhasil disimpan: {tugas} | {deadline}", flush=True)
 
-        # --- KIRIM NOTIFIKASI WHATSAPP ---
         selisih = (deadline_date - today).days
         if selisih == 0:
             info_hari = "*HARI INI!*"
@@ -721,7 +681,6 @@ def confirm_task():
             f"\u23f0 Deadline: {deadline}\n\n"
             f"Mantap!"
         )
-        # DIPERBAIKI: Kirim WA notifikasi (sebelumnya tidak ada di file ini)
         send_wa(msg, target=FONNTE_GROUP_ID)
 
         return jsonify({
@@ -757,18 +716,13 @@ def webhook():
         print(f"Group: '{group}'")
         print(f"Configured FONNTE_GROUP_ID: '{FONNTE_GROUP_ID}'")
 
-        # Fonnte bisa mengirim group ID di field 'group', 'sender', atau keduanya
-        # target = grup jika ada, fallback ke sender
         target = group if group else sender
 
-        # is_match: True jika pesan berasal dari grup KTI
-        # Jika FONNTE_GROUP_ID kosong → terima semua (mode debug)
         is_match = (
             not FONNTE_GROUP_ID
             or group == FONNTE_GROUP_ID
             or sender == FONNTE_GROUP_ID
             or target == FONNTE_GROUP_ID
-            # Fallback: cek apakah salah satu value payload mengandung group ID
             or FONNTE_GROUP_ID in str(group)
             or FONNTE_GROUP_ID in str(sender)
         )
@@ -780,13 +734,11 @@ def webhook():
             
         msg_lower = message.lower()
         today_str = str(datetime.now().date())
-        
-        # Helper: kirim WA dan return response
+
         def reply_wa(msg_text):
             send_wa(msg_text, target=target)
             return jsonify({"status": "ok", "reply": msg_text})
 
-        # 0. PERINTAH /HELP (PANDUAN BANTUAN)
         if '/help' in msg_lower or '/bantuan' in msg_lower:
             help_msg = (
                 "*PANDUAN PENGGUNAAN BOT TUGAS*\n\n"
@@ -814,7 +766,6 @@ def webhook():
             )
             return reply_wa(help_msg)
 
-        # 1. PERINTAH /ADD
         elif '/add' in msg_lower:
             query = re.sub(r'\/add', '', message, flags=re.IGNORECASE).strip()
             if not query:
@@ -866,7 +817,6 @@ def webhook():
                 else:
                     return reply_wa("Terjadi kesalahan saat memproses data tugas.")
 
-        # 2. PERINTAH /TUGAS
         elif '/tugas' in msg_lower:
             tasks = get_all_tasks()
             if tasks:
@@ -877,8 +827,7 @@ def webhook():
             else:
                 reply = "Tidak ada tugas aktif yang tersimpan saat ini."
             return reply_wa(reply)
-            
-        # 3. PERINTAH /HAPUS
+
         elif '/hapus' in msg_lower:
             query_hapus = re.sub(r'\/hapus', '', message, flags=re.IGNORECASE).strip()
             tasks = get_all_tasks()
@@ -893,17 +842,14 @@ def webhook():
                 reply += "\nSilakan ketik:\n- `/hapus 1` (hapus 1 tugas)\n- `/hapus 1 2 3` (hapus banyak)\n- `/hapus 1-3` (hapus rentang nomor)\n- `/hapus semua` (hapus seluruh tugas)"
                 return reply_wa(reply)
 
-            # Cek opsi Hapus Semua
             if query_hapus.lower() in ['semua', 'all', 'semesta']:
                 deleted_count = len(tasks)
                 for task in tasks:
                     delete_task_by_id(task['id'])
                 return reply_wa(f"*SELURUH TUGAS BERHASIL DIHAPUS*\n\nTotal tugas yang dihapus: {deleted_count} tugas.")
 
-            # Parsing nomor-nomor yang ingin dihapus (dukung rentang 1-3 dan terpisah 1 2 3 / 1,2,3)
             indices_to_delete = set()
 
-            # Tangani format rentang seperti 1-3
             range_matches = re.findall(r'(\d+)\s*-\s*(\d+)', query_hapus)
             for start, end in range_matches:
                 s, e = int(start), int(end)
@@ -912,8 +858,6 @@ def webhook():
                 for idx in range(s, e + 1):
                     indices_to_delete.add(idx - 1)
 
-            # Tangani angka tunggal / terpisah spasinya/komanya
-            # Hapus pola rentang dulu agar angka di rentang tidak terhitung ganda
             clean_query = re.sub(r'\d+\s*-\s*\d+', '', query_hapus)
             single_numbers = re.findall(r'\b\d+\b', clean_query)
             for num_str in single_numbers:
@@ -925,7 +869,6 @@ def webhook():
             deleted_items = []
             invalid_numbers = []
 
-            # Urutkan index dari terbesar ke terkecil agar tidak terjadi masalah perpindahan indeks
             sorted_indices = sorted(list(indices_to_delete), reverse=True)
 
             for idx in sorted_indices:
@@ -937,7 +880,7 @@ def webhook():
                     invalid_numbers.append(str(idx + 1))
 
             if deleted_items:
-                deleted_items.reverse() # Urutkan kembali sesuai tampilan semula
+                deleted_items.reverse()
                 reply = f"*BERHASIL MENGHAPUS {len(deleted_items)} TUGAS*\n\nDaftar tugas yang dihapus:\n" + "\n".join(deleted_items)
                 if invalid_numbers:
                     reply += f"\n\nCatatan: Nomor {', '.join(invalid_numbers)} tidak ditemukan."
@@ -945,7 +888,6 @@ def webhook():
             else:
                 return reply_wa(f"Nomor tugas {', '.join(invalid_numbers)} tidak ditemukan di daftar.")
 
-        # 4. PERINTAH /EDIT
         elif '/edit' in msg_lower:
             match = re.search(r'\/edit\s+(\d+)(.*)', message, re.IGNORECASE | re.DOTALL)
             tasks = get_all_tasks()
@@ -980,7 +922,6 @@ def webhook():
                     reply += "\nSilakan ketik: `/edit [nomor] [perubahan]`"
                     return reply_wa(reply)
 
-        # 5. PERINTAH /WAKTU
         elif '/waktu' in msg_lower:
             match = re.search(r'[:/]waktu\s+(\d{1,2})[.:]?(\d{2})?', message, re.IGNORECASE)
             if not match:
@@ -1022,7 +963,6 @@ def webhook():
                 else:
                     return reply_wa("Format waktu tidak valid. Silakan gunakan format 00-23 untuk jam dan 00-59 untuk menit.\nContoh: `/waktu 18:30`")
 
-        # 6. PERINTAH /DEADLINE (melengkapi tugas pending)
         elif '/deadline' in msg_lower:
             pending = get_pending_task()
             if not pending:
@@ -1069,7 +1009,6 @@ def webhook():
                     except ValueError:
                         return reply_wa(f"Format tanggal tidak valid: '{new_deadline}'. Gunakan format YYYY-MM-DD.")
 
-        # 7. PERINTAH /MAPEL (melengkapi tugas pending)
         elif '/mapel' in msg_lower:
             pending = get_pending_task()
             if not pending:
@@ -1166,7 +1105,6 @@ def debug_audio():
     from flask import send_from_directory
     return send_from_directory(UPLOAD_FOLDER, "record.wav", as_attachment=False)
 
-# Load settings terakhir saat startup
 _settings = load_settings()
 _reminder_hour = _settings.get('reminder_hour', 18)
 _reminder_minute = _settings.get('reminder_minute', 0)
