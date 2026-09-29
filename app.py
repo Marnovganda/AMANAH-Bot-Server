@@ -47,7 +47,7 @@ def gemini_generate(model_name, **kwargs):
 
 
 FONNTE_TOKEN    = os.getenv("FONNTE_TOKEN")
-FONNTE_GROUP_ID = os.getenv("FONNTE_GROUP_ID", "120363407069913309@g.us")
+FONNTE_GROUP_ID = os.getenv("FONNTE_GROUP_ID")
 TZ = os.getenv("TZ", "Asia/Jakarta")
 
 UPLOAD_FOLDER = 'uploads'
